@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Taller: Paradigmas Imperativo vs Funcional — Interactivo</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#94a3b8; --accent:#7c3aed; --accent-2:#06b6d4; --success:#16a34a; --danger:#ef4444; --glass: rgba(255,255,255,0.04);
+      --card-radius:16px; --maxw:1100px;
+    }
+    html,body{height:100%;margin:0;font-family: 'Segoe UI', Roboto, Arial, sans-serif;background:linear-gradient(180deg,#071020 0%, #071428 100%);color:#e6eef8}
+    .wrap{max-width:var(--maxw);margin:28px auto;padding:20px}
+    header{display:flex;gap:16px;align-items:center;margin-bottom:18px}
+    .logo{width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;box-shadow:0 8px 30px rgba(12,11,22,0.6)}
+    .logo svg{width:38px;height:38px}
+    h1{font-size:20px;margin:0}
+    p.lead{margin:0;color:var(--muted);font-size:14px}
+
+    /* grid */
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:18px}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--card-radius);padding:18px;box-shadow:0 6px 30px rgba(2,6,23,0.6);border:1px solid rgba(255,255,255,0.03)}
+    .section-title{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .chip{background:var(--glass);padding:6px 10px;border-radius:999px;font-weight:600;color:var(--muted);font-size:12px}
+
+    /* containers */
+    .panel{border-radius:12px;padding:14px;background:linear-gradient(180deg, rgba(255,255,255,0.015), rgba(255,255,255,0.01));border:1px solid rgba(255,255,255,0.03);margin-bottom:12px}
+    .panel h3{margin:0 0 8px 0}
+    .muted{color:var(--muted);font-size:13px}
+
+    /* color accent bars */
+    .accent-bar{height:6px;border-radius:6px;margin-bottom:12px;background:linear-gradient(90deg,var(--accent),var(--accent-2))}
+
+    /* code blocks */
+    pre{background:#071022;padding:12px;border-radius:10px;overflow:auto;border:1px solid rgba(255,255,255,0.03);font-family:monospace;font-size:13px}
+    .controls{display:flex;gap:8px;margin-top:8px}
+    button.btn{background:transparent;border:1px solid rgba(255,255,255,0.06);padding:8px 10px;border-radius:8px;color:var(--muted);cursor:pointer}
+    button.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));border:none;color:white}
+
+    /* map */
+    .map-wrap{height:420px;position:relative}
+    svg.map{width:100%;height:100%}
+    .node{cursor:pointer}
+    .node rect{rx:12;fill:rgba(255,255,255,0.03);stroke:rgba(255,255,255,0.04)}
+    .node text{fill:#e8f0ff;font-weight:700}
+
+    /* right column */
+    .side{position:sticky;top:24px;height:fit-content}
+    .stat{display:flex;gap:10px;align-items:center}
+
+    /* quiz */
+    .qa{margin-top:12px}
+    .qa button{display:block;width:100%;text-align:left;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--muted);margin-bottom:8px}
+    .qa button.correct{border-color:var(--success);background:rgba(16,185,129,0.06);color:#dffcef}
+    .qa button.wrong{border-color:var(--danger);background:rgba(239,68,68,0.06);}
+
+    footer{margin-top:18px;color:var(--muted);font-size:13px;text-align:center}
+
+    /* responsive */
+    @media (max-width:980px){.grid{grid-template-columns:1fr;}.side{position:static}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo" aria-hidden>
+        <!-- brain icon -->
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 3C9.243 3 7 5.243 7 8v1H5a2 2 0 00-2 2v2a2 2 0 002 2h2v1c0 2.757 2.243 5 5 5s5-2.243 5-5v-1h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2V8c0-2.757-2.243-5-5-5z" stroke="#fff" stroke-opacity="0.9" stroke-width="0.8"/></svg>
+      </div>
+      <div>
+        <h1>Taller Interactivo: Paradigmas Imperativo vs Funcional</h1>
+        <p class="lead">Material pedagógico interactivo, con mapas conceptuales, ejemplos ejecutables (simulados), comparaciones profundas y actividades de comprensión.</p>
+      </div>
+    </header>
+
+    <div class="grid">
+      <main class="card">
+        <div class="section-title">
+          <span class="chip">Introducción ampliada</span>
+        </div>
+        <div class="panel">
+          <h3>Contexto y propósito</h3>
+          <p class="muted">Los paradigmas de programación son modelos conceptuales que condicionan cómo pensamos, analizamos y construimos soluciones. En este taller abordamos en profundidad dos paradigmas con enfoques distintos pero complementarios: el paradigama imperativo (centrado en instrucciones y estado) y el paradigma funcional (centrado en la composición de funciones y la inmutabilidad). Nuestro objetivo es que, tras trabajar este material, puedas:</p>
+          <ul class="muted">
+            <li>Describir con rigor los principios de cada paradigma.</li>
+            <li>Comparar ventajas y limitaciones con evidencias técnicas.</li>
+            <li>Aplicar patrones de diseño adecuados al contexto del problema.</li>
+            <li>Reflexionar y justificar la elección de un paradigma en proyectos reales.</li>
+          </ul>
+        </div>
+
+        <div class="accent-bar"></div>
+
+        <!-- Imperative deep dive -->
+        <section id="imperative" class="panel">
+          <h3>Parte 1 — Paradigma Imperativo</h3>
+          <p class="muted">Definición: El paradigma imperativo describe la solución como una secuencia de instrucciones que modifican el estado del programa. Está íntimamente ligado al modelo de máquina: instrucciones, memoria, variables y control de flujo.</p>
+          <h4>Características clave</h4>
+          <ul class="muted">
+            <li><strong>Secuencialidad:</strong> ejecución paso-a-paso.</li>
+            <li><strong>Variables mutables:</strong> contenedores cuyo valor cambia.</li>
+            <li><strong>Estructuras de control:</strong> bucles, condicionales y saltos.</li>
+            <li><strong>Estado:</strong> global o local; el programador gestiona la evolución del estado.</li>
+          </ul>
+
+          <h4>Énfasis en instrucciones — explicación pedagógica</h4>
+          <p class="muted">Imagina una receta culinaria: la receta (programa) dicta exactamente qué hacer y en qué orden. En entornos donde el control de la memoria y el rendimiento es crítico, este modelo ofrece una ventaja: permite al programador optimizar cada paso.</p>
+
+          <h4>Variables y estado</h4>
+          <p class="muted">En el enfoque imperativo, las variables son ubicaciones de memoria con un identificador. Pueden cambiar su valor a lo largo del tiempo de ejecución. Este cambio es la base del cómputo imperativo.</p>
+
+          <h4>Ejemplo y análisis (C)</h4>
+          <pre id="codeC">#include &lt;stdio.h&gt;
+
+int main() {
+    int numeros[] = {1, 2, 3, 4, 5};
+    int suma = 0;
+    for (int i = 0; i &lt; 5; i++) {
+        suma += numeros[i];  // el estado de "suma" cambia en cada iteración
+    }
+    printf("La suma es: %d\n", suma);
+    return 0;
+}</pre>
+          <div class="controls">
+            <button class="btn" onclick="copyCode('codeC')">Copiar</button>
+            <button class="btn" onclick="showSim('simC')">Mostrar simulación</button>
+            <button class="btn" onclick="toggleNote('noteC')">Ver notas</button>
+          </div>
+          <div id="noteC" style="display:none;margin-top:10px" class="muted">
+            <strong>Notas:</strong> Aquí `suma` mantiene el estado acumulado. El flujo y la mutabilidad permiten optimizar el uso de memoria y tiempo, pero requieren disciplina para evitar efectos secundarios no deseados.
+          </div>
+          <div id="simC" style="display:none;margin-top:10px" class="panel muted">
+            <strong>Simulación (ejecución paso a paso):</strong>
+            <ol>
+              <li>Inicia `suma = 0`.</li>
+              <li>i=0 → suma = 0 + 1 = 1.</li>
+              <li>i=1 → suma = 1 + 2 = 3.</li>
+              <li>i=2 → suma = 3 + 3 = 6.</li>
+              <li>i=3 → suma = 6 + 4 = 10.</li>
+              <li>i=4 → suma = 10 + 5 = 15. Resultado: 15.</li>
+            </ol>
+          </div>
+        </section>
+
+        <div class="accent-bar"></div>
+
+        <!-- Functional deep dive -->
+        <section id="functional" class="panel">
+          <h3>Parte 2 — Paradigma Funcional</h3>
+          <p class="muted">Definición: El paradigma funcional trata el cómputo como la evaluación de funciones matemáticas. Evita la mutación de datos y los efectos secundarios; su unidad básica es la función pura.</p>
+          <h4>Características clave</h4>
+          <ul class="muted">
+            <li><strong>Funciones puras:</strong> deterministas y sin efectos secundarios.</li>
+            <li><strong>Inmutabilidad:</strong> los datos no cambian; se crean nuevas estructuras al transformar datos.</li>
+            <li><strong>Composición:</strong> construir operaciones complejas combinando funciones simples.</li>
+            <li><strong>Recursividad:</strong> alternativa a bucles tradicionales.</li>
+          </ul>
+
+          <h4>Enfoque pedagógico</h4>
+          <p class="muted">El paradigma funcional facilita el razonamiento formal gracias a sus raíces matemáticas: si una función es pura, puedes sustituir su llamada por su resultado sin alterar el comportamiento del programa (referential transparency).</p>
+
+          <h4>Ejemplo y análisis (Haskell)</h4>
+          <pre id="codeH">-- Definición de una lista y suma con fold
+numeros = [1, 2, 3, 4, 5]
+suma = foldl (+) 0 numeros
+
+main = print suma</pre>
+          <div class="controls">
+            <button class="btn" onclick="copyCode('codeH')">Copiar</button>
+            <button class="btn" onclick="showSim('simH')">Mostrar simulación</button>
+            <button class="btn" onclick="toggleNote('noteH')">Ver notas</button>
+          </div>
+          <div id="noteH" style="display:none;margin-top:10px" class="muted">
+            <strong>Notas:</strong> `foldl` recorre la lista y aplica una función pura de acumulación. No existe una variable mutable `suma` que el programador deba gestionar explícitamente.
+          </div>
+          <div id="simH" style="display:none;margin-top:10px" class="panel muted">
+            <strong>Simulación conceptual:</strong>
+            <p>foldl (+) 0 [1,2,3,4,5] =&gt; (((((0 + 1) + 2) + 3) + 4) + 5) = 15
+          </div>
+        </section>
+
+        <div class="accent-bar"></div>
+
+        <!-- Comparison deep -->
+        <section id="comparison" class="panel">
+          <h3>2 — Comparación profunda</h3>
+          <h4>Manejo de variables y estado</h4>
+          <p class="muted">En el paradigma imperativo, el estado es central: las variables se actualizan para reflejar el progreso del cálculo. En el paradigma funcional, el estado no se muta; en su lugar, cada transformación devuelve nuevos valores—esto facilita el razonamiento y evita errores por efectos secundarios.</p>
+
+          <h4>Ventajas y desventajas</h4>
+          <div class="muted">
+            <strong>Mutabilidad (Imperativo)</strong>
+            <ul>
+              <li>+ Control explicito de recursos y rendimiento.</li>
+              <li>- Mayor complejidad al razonar sobre el flujo y posibles efectos secundarios.</li>
+            </ul>
+            <strong>Inmutabilidad (Funcional)</strong>
+            <ul>
+              <li>+ Facilita pruebas, paralelismo y predictibilidad.</li>
+              <li>- En algunos casos necesita estructuras persistentes o más memoria.</li>
+            </ul>
+          </div>
+
+          <h4>Enfoque en funciones</h4>
+          <p class="muted">Imperativo: las funciones son procedimientos que transfieren control y (a menudo) modifican estado. Funcional: las funciones son transformaciones puras, composables y testables.</p>
+
+          <h4>Modularidad y reutilización</h4>
+          <p class="muted">La modularidad en estilos imperativos se consigue por separación en módulos/procedimientos. En funcional, se consigue por composición de funciones pequeñas y bien tipadas; esto favorece la reutilización y la prueba unitaria.</p>
+
+          <h4>Legibilidad y mantenibilidad</h4>
+          <p class="muted">El código imperativo puede ser más intuitivo al principio, pero en sistemas grandes el manejo de estados compartidos complica el mantenimiento. El código funcional, al ser más declarativo y menos dependiente del estado, suele ser más fácil de razonar a escala—siempre que el equipo domine la abstracción.</p>
+
+          <h4>Ejemplos de manejo de errores y cambios</h4>
+          <p class="muted">Imperativo (C): el programador chequea y maneja condiciones (if/else), se usan códigos de error o excepciones. Funcional (Haskell/Scala): se usan tipos algebraicos como <code>Maybe</code>, <code>Either</code> o monadas para encapsular errores sin romper la composición.</p>
+
+          <pre id="codeErrC">// C: manejo básico de división
+int dividir(int a, int b) {
+    if (b == 0) {
+        // indicar error con código o mensaje
+        return 0; // convención simplificada
+    }
+    return a / b;
+}</pre>
+
+          <pre id="codeErrH">-- Haskell: manejo con Maybe
+safeDiv :: Int -> Int -> Maybe Int
+safeDiv _ 0 = Nothing
+safeDiv x y = Just (x `div` y)</pre>
+          <div class="controls">
+            <button class="btn" onclick="copyCode('codeErrC')">Copiar C</button>
+            <button class="btn" onclick="copyCode('codeErrH')">Copiar Haskell</button>
+          </div>
+        </section>
+
+        <div class="accent-bar"></div>
+
+        <!-- Pedagogical elements: exercises and summary -->
+        <section id="pedago" class="panel">
+          <h3>Actividades pedagógicas y mapa conceptual</h3>
+          <p class="muted">Realiza las actividades sugeridas y usa el mapa conceptual interactivo para repasar relaciones entre conceptos clave.</p>
+          <ol class="muted">
+            <li>Describe un caso real en el que eligieras imperativo y explica por qué.</li>
+            <li>Re-escribe un algoritmo imperativo (p. ej. búsqueda lineal) en estilo funcional y explica las diferencias.</li>
+            <li>Identifica posibles efectos secundarios en un fragmento de código y sugiere una refactorización funcional.</li>
+          </ol>
+
+          <div style="margin-top:12px" class="map-wrap">
+            <!-- Concept map (SVG) -->
+            <svg class="map" viewBox="0 0 1000 420" preserveAspectRatio="xMidYMid meet">
+              <!-- connections -->
+              <defs>
+                <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                  <path d="M0,0 L8,4 L0,8 L2,4 z" fill="#9bb6ff" />
+                </marker>
+              </defs>
+              <g stroke="#2b3f66" stroke-width="2" fill="none">
+                <path id="c1" d="M240 70 C 340 90, 460 90, 560 70" marker-end="url(#arrow)" opacity="0.6"></path>
+                <path id="c2" d="M240 140 C 340 160, 460 160, 560 140" marker-end="url(#arrow)" opacity="0.6"></path>
+              </g>
+
+              <!-- Nodes -->
+              <g class="node" data-id="n-paradigms" transform="translate(60,40)">
+                <rect width="220" height="80"></rect>
+                <text x="110" y="40" text-anchor="middle">Paradigmas</text>
+              </g>
+
+              <g class="node" data-id="n-imperative" transform="translate(300,30)">
+                <rect width="220" height="60"></rect>
+                <text x="110" y="36" text-anchor="middle">Imperativo</text>
+              </g>
+
+              <g class="node" data-id="n-functional" transform="translate(300,140)">
+                <rect width="220" height="60"></rect>
+                <text x="110" y="36" text-anchor="middle">Funcional</text>
+              </g>
+
+              <g class="node" data-id="n-state" transform="translate(560,20)">
+                <rect width="240" height="48"></rect>
+                <text x="120" y="30" text-anchor="middle">Estado mutable</text>
+              </g>
+
+              <g class="node" data-id="n-pure" transform="translate(560,120)">
+                <rect width="240" height="48"></rect>
+                <text x="120" y="30" text-anchor="middle">Funciones puras / Inmutabilidad</text>
+              </g>
+
+              <g class="node" data-id="n-composition" transform="translate(300,260)">
+                <rect width="220" height="60"></rect>
+                <text x="110" y="36" text-anchor="middle">Composición / Reutilización</text>
+              </g>
+
+            </svg>
+          </div>
+          <p class="muted" style="margin-top:8px">Haz clic en un nodo del mapa para ver explicaciones ampliadas y ejemplos relacionados.</p>
+        </section>
+
+        <div class="accent-bar"></div>
+
+        <section class="panel">
+          <h3>Conclusión</h3>
+          <p class="muted">Síntesis: El paradigma imperativo y el funcional representan maneras distintas de pensar el cómputo. El imperativo prioriza el control y la optimización paso a paso; el funcional prioriza la composabilidad, la previsibilidad y la facilidad para razonar a nivel matemático. La elección depende del dominio, los requerimientos de rendimiento, el equipo y la mantenibilidad esperada. Un desarrollador versátil conoce ambos y sabe cuándo aplicar cada patrón.</p>
+
+          <h4>Recomendaciones prácticas</h4>
+          <ul class="muted">
+            <li>Usar imperativo en sistemas embebidos, controladores, y código crítico en rendimiento.</li>
+            <li>Usar funcional en procesamiento de datos, pipelines, concurrencia y cuando se prioriza la robustez.</li>
+            <li>En proyectos grandes, combinar estilos (multiparadigma) y documentar las decisiones de diseño.</li>
+          </ul>
+        </section>
+
+      </main>
+
+      <aside class="side">
+        <div class="card">
+          <div class="stat">
+            <div style="width:46px;height:46px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 3C9.243 3 7 5.243 7 8v1H5a2 2 0 00-2 2v2a2 2 0 002 2h2v1c0 2.757 2.243 5 5 5s5-2.243 5-5v-1h2a2 2 0 002-2v-2a2 2 0 00-2-2h-2V8c0-2.757-2.243-5-5-5z" stroke="#fff" stroke-width="0.8"/></svg>
+            </div>
+            <div style="flex:1;margin-left:8px">
+              <div style="font-weight:700">Resumen rápido</div>
+              <div class="muted" style="font-size:13px;margin-top:4px">Imperativo: control y estado. Funcional: funciones puras e inmutabilidad.</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <h4 style="margin:0 0 8px 0">Mini-quiz</h4>
+            <div class="qa" id="quiz">
+              <button data-answer="b">1) ¿Qué paradigma prioriza la inmutabilidad?</button>
+              <button data-answer="a">2) ¿Dónde es natural usar mutabilidad?</button>
+              <button data-answer="b2">3) ¿Cuál usa funciones puras como unidad básica?</button>
+            </div>
+            <div id="quizRes" class="muted" style="margin-top:8px"></div>
+          </div>
+
+          <div style="margin-top:12px">
+            <h4 style="margin:0 0 8px 0">Recursos y lectura</h4>
+            <ul class="muted">
+              <li>Trejos, O.I. (Programación imperativa con C)</li>
+              <li>Layedra et al. (Análisis de lenguajes)</li>
+              <li>Rubio et al. (Lenguajes de programación, UNED)</li>
+            </ul>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <footer>
+      Material preparado para la actividad: "Comparación entre los Paradigmas Imperativo y Funcional" — Formato interactivo.
+    </footer>
+  </div>
+
+  <script>
+    // Copy code utility
+    function copyCode(id){
+      const txt = document.getElementById(id).innerText;
+      navigator.clipboard.writeText(txt).then(()=>{
+        alert('Código copiado al portapapeles');
+      });
+    }
+    function toggleNote(id){
+      const el = document.getElementById(id);
+      el.style.display = (el.style.display==='none')? 'block':'none';
+    }
+    function showSim(id){
+      const el = document.getElementById(id);
+      el.style.display = (el.style.display==='none')? 'block':'none';
+    }
+
+    // Map interactivity: show tooltip / explanation
+    document.querySelectorAll('svg.map .node').forEach(node=>{
+      node.addEventListener('click', (e)=>{
+        const id = node.getAttribute('data-id');
+        showNodeDetail(id);
+      });
+    });
+    function showNodeDetail(id){
+      let text='';
+      if(id==='n-paradigms') text='Los paradigmas son modelos conceptuales que guían el diseño del software.';
+      if(id==='n-imperative') text='Imperativo: instrucciones secuenciales, control y variables mutables.';
+      if(id==='n-functional') text='Funcional: funciones puras, inmutabilidad y composición.';
+      if(id==='n-state') text='Estado mutable: facilita control pero introduce efectos secundarios.';
+      if(id==='n-pure') text='Funciones puras: previsibles, testables y composables.';
+      if(id==='n-composition') text='Composición: construir sistemas a partir de funciones pequeñas.';
+      alert(text);
+    }
+
+    // Quiz logic
+    const quiz = document.getElementById('quiz');
+    quiz.addEventListener('click',(e)=>{
+      if(e.target.tagName!=='BUTTON') return;
+      const btn = e.target;
+      const correct = {0:'b',1:'a',2:'b2'}; // mapping index
+      const idx = Array.from(quiz.children).indexOf(btn);
+      const ans = btn.getAttribute('data-answer');
+      // simplistic checking
+      const mapping = ['b','a','b2'];
+      if(ans===mapping[idx]){
+        btn.classList.add('correct');
+        document.getElementById('quizRes').innerText='Respuesta correcta ✔';
+      } else {
+        btn.classList.add('wrong');
+        document.getElementById('quizRes').innerText='Respuesta incorrecta ✖. Revisa la sección correspondiente.';
+      }
+    });
+  </script>
+</body>
+</html>
