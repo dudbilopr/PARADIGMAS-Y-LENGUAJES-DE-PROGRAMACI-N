@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Actividad 9 · Calculadora con compiladores de compiladores</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts - Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      color: #1f2937;
+      background-color: #f9fafb;
+    }
+    .slide-active {
+      display: block;
+      animation: fadeIn 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    .flow-node::after {
+      content: "↓";
+      position: absolute;
+      bottom: -1.25rem;
+      left: 50%;
+      transform: translateX(-50%);
+      color: #3b82f6;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    .flow-node:last-child::after {
+      content: "";
+    }
+    .code-editor {
+      min-height: 200px;
+    }
+    .code-editor:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5);
+    }
+    .text-container {
+        max-width: 900px;
+        margin: auto;
+    }
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <div class="fixed top-0 left-0 w-full bg-white z-50 shadow-md">
+    <header class="container mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3 text-lg font-bold text-gray-800">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M9 13H5a2 2 0 01-2-2V9a2 2 0 012-2h4m0 6a2 2 0 110-4m0 4h4m-4-4h.01M9 13l3 3m-3-3l-3 3m0 0a2 2 0 100-4m0 4a2 2 0 110-4" />
+        </svg>
+        Actividad 9 · Calculadora
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="menu-btn" class="p-2 text-gray-700 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors duration-200">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <button id="prev-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-full transition-colors duration-200">
+          Anterior
+        </button>
+        <button id="next-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2 px-4 rounded-full transition-colors duration-200">
+          Siguiente
+        </button>
+      </div>
+    </header>
+    <div id="progress-bar" class="w-full h-1 bg-indigo-500 transition-all duration-300 ease-in-out"></div>
+  </div>
+
+  <main class="flex-grow flex items-center justify-center p-4 pt-24 pb-16 sm:pb-24">
+    <div id="deck" class="relative w-full max-w-4xl min-h-[500px] bg-white rounded-3xl shadow-lg overflow-hidden flex flex-col justify-center">
+      <!-- Slides will be rendered here by JavaScript -->
+    </div>
+  </main>
+
+  <!-- Navigation Menu -->
+  <div id="menu-overlay" class="fixed inset-0 bg-gray-900 bg-opacity-75 z-[49] hidden transition-opacity duration-300">
+    <div class="absolute top-0 right-0 w-80 h-full bg-white shadow-xl transform translate-x-full transition-transform duration-300 ease-in-out" id="menu-panel">
+      <div class="p-6">
+        <h2 class="text-xl font-bold mb-4 text-gray-800">Menú de Navegación</h2>
+        <ul id="menu-list" class="space-y-2"></ul>
+      </div>
+    </div>
+  </div>
+
+  <footer class="fixed bottom-0 left-0 w-full text-center text-sm text-gray-500 py-3 bg-white z-40 shadow-[0_-5px_10px_rgba(0,0,0,0.05)]">
+    © 2025 · PARADIGMAS Y LENGUAJES DE PROGRAMACIÓN · Dudbil Olvasada Pabón Riaño · 9/7/2025
+  </footer>
+
+  <script>
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const menuBtn = document.getElementById('menu-btn');
+    const menuOverlay = document.getElementById('menu-overlay');
+    const menuPanel = document.getElementById('menu-panel');
+    const menuList = document.getElementById('menu-list');
+    const deck = document.getElementById('deck');
+    const progressBar = document.getElementById('progress-bar');
+    let currentIndex = 0;
+
+    // Functions for the calculator and code editor
+    const calcFuncs = {
+      sumar: (a, b) => a + b,
+      restar: (a, b) => a - b,
+      multiplicar: (a, b) => a * b,
+      dividir: (a, b) => {
+        if (b === 0) throw new Error("División por cero no permitida");
+        return a / b;
+      }
+    };
+
+    function calcularExpresion() {
+      const input = document.getElementById('expr');
+      const output = document.getElementById('resultado');
+      try {
+        const res = Function('ops', `with(ops){return ${input.value}}`)(calcFuncs);
+        output.innerHTML = `<p class="text-lg font-semibold text-green-600 mt-4">Resultado: <span class="text-xl">${res}</span></p>`;
+      } catch (e) {
+        output.innerHTML = `<p class="text-lg font-semibold text-red-600 mt-4">Error: <span class="text-base">${e.message}</span></p>`;
+      }
+    }
+
+    function runCode() {
+        const editor = document.getElementById('code-editor');
+        const output = document.getElementById('code-output');
+        const code = editor.value;
+        try {
+            const result = eval(code);
+            output.innerHTML = `<div class="mt-4 p-4 rounded-lg bg-emerald-50 text-emerald-800 font-mono text-sm">Salida: ${result}</div>`;
+        } catch (e) {
+            output.innerHTML = `<div class="mt-4 p-4 rounded-lg bg-rose-50 text-rose-800 font-mono text-sm">Error: ${e.message}</div>`;
+        }
+    }
+
+    // Function to generate the flowchart HTML
+    function flowHTML(titulo, nodos) {
+      let html = `<div class='flex flex-col items-center p-4 sm:p-6'><div class='flow-node text-center w-full max-w-sm px-4 py-2 bg-blue-100 border-2 border-blue-400 rounded-xl shadow-md font-medium text-blue-900 transition-transform duration-300 hover:scale-105'>${titulo}</div>`;
+      nodos.forEach((n) => {
+        html += `<div class='flow-node text-center w-full max-w-sm mt-8 px-4 py-2 bg-blue-100 border-2 border-blue-400 rounded-xl shadow-md font-medium text-blue-900 transition-transform duration-300 hover:scale-105'>${n}</div>`;
+      });
+      html += `</div>`;
+      return html;
+    }
+
+    // SVG Icons
+    const icons = {
+      book: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.467 9.543 5 8 5a6 6 0 000 12c.983 0 1.952-.138 2.863-.35L12 19m0-13a9 9 0 110 18A9 9 0 0112 6.253z" /></svg>`,
+      lightbulb: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 11l3-3m0 0l3 3m-3-3v8m0 0a2 2 0 110 4m0-4h4m-4-4h.01M9 13l3 3m-3-3l-3 3m0 0a2 2 0 100-4m0 4a2 2 0 110-4" /></svg>`,
+      code: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" /></svg>`,
+      pencil: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>`,
+      cogs: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.227.818 3.58.497z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>`,
+      link: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.101-1.101m-.75-6.526a4 4 0 00-5.657 0m0 0l-1.101-1.101a4 4 0 115.657-5.657l4 4a4 4 0 11-5.657 5.657z" /></svg>`,
+      flask: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 15V4.5a3.5 3.5 0 10-7 0V15m7 0l-3 3m3-3l3 3m-3-3v3m0 0a3.5 3.5 0 10-7 0m7 0h3m-3 0h-3M9 18l3 3m-3-3l-3 3m-3 3h16a2 2 0 002-2v-4a2 2 0 00-2-2h-16a2 2 0 00-2 2v4a2 2 0 002 2z" /></svg>`,
+      wrench: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13a9.004 9.004 0 01-4.908.410c-1.334.332-2.395 1.157-2.796 2.508a1.5 1.5 0 001.524 1.776h.635l-1.332 2.656m0 0a2 2 0 100 4m0-4a2 2 0 110-4m-1.332 2.656a2 2 0 100 4" /></svg>`,
+      archive: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+      fileText: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+      check: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+      conclusions: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>`,
+      glossary: `<svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-emerald-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 4h2a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2m0 16h8m-8 0H6m2-2h8m-8 0H6m2-2h8m-8 0H6m2-2h8m-8 0H6" /></svg>`,
+    };
+
+    const slides = [
+      {
+        title: "Construcción de una Calculadora",
+        icon: icons.book,
+        body: `<p class="text-xl text-gray-600">Autor: Dudbil Olvasada Pabón Riaño</p><p class="text-lg text-gray-500 mt-4"><strong>Curso:</strong> Paradigmas y Lenguajes de Programación<br/><strong>Fecha:</strong> 9/7/2025</p>`,
+        type: 'normal'
+      },
+      {
+        title: "Paso 1: Requisitos",
+        icon: icons.lightbulb,
+        body: `<p>Esta es la fase fundamental de cualquier proyecto de software. Aquí identificamos de manera clara y precisa qué necesitamos que nuestra calculadora haga. Esto incluye las <b>operaciones matemáticas</b> que soportará (suma, resta, etc.), el <b>diseño de la interfaz</b> para el usuario y cómo se presentarán los <b>resultados</b>. La falta de claridad en esta etapa puede llevar a errores costosos más adelante.</p>${flowHTML("Requisitos del Software", ["Operaciones", "Interfaz de Usuario", "Presentación de Resultados"])}`,
+        type: 'normal'
+      },
+      {
+        title: "Paso 2: Lenguaje",
+        icon: icons.code,
+        body: `<p>La elección del lenguaje de programación es una decisión estratégica. Para este proyecto, seleccionamos <b>JavaScript</b> debido a su naturaleza de interpretación en el navegador. No requiere un paso de compilación separado, lo que acelera el ciclo de desarrollo y permite una visualización instantánea. Es un lenguaje ideal para aplicaciones web interactivas.</p>${flowHTML("Selección de Herramientas", ["JavaScript", "Python", "C++"])}`,
+        type: 'normal'
+      },
+      {
+        title: "Paso 3: Código Fuente Interactivo",
+        icon: icons.pencil,
+        body: `<p>Aquí es donde la lógica de la calculadora cobra vida. Definimos las funciones matemáticas esenciales y la lógica que controlará la interfaz. Usa el editor de abajo para probar el código tú mismo.</p><div class="flex flex-col items-center mt-6 p-6 bg-gray-100 rounded-lg shadow-inner"><p class="text-sm font-semibold text-gray-700">Editor de Código</p><textarea id="code-editor" class="w-full h-40 mt-2 p-3 font-mono text-sm bg-white rounded-lg border-2 border-gray-300 focus:border-indigo-500 transition-colors duration-200 resize-none">function calcular(a, b) {
+    return (a + b) * 2;
+}
+console.log(calcular(5, 3));</textarea><button onclick="runCode()" class="mt-4 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-6 rounded-full transition-all duration-300 transform hover:scale-105">Ejecutar Código</button><div id="code-output" class="w-full mt-4 text-left"></div></div>`,
+        type: 'interactive_code'
+      },
+      {
+        title: "Paso 4: Compilación vs. Interpretación",
+        icon: icons.cogs,
+        body: `<p>A diferencia de lenguajes como C++ que requieren un <b>compilador</b> para traducir todo el código a lenguaje de máquina antes de la ejecución, JavaScript utiliza un <b>intérprete</b>. El intérprete lee y ejecuta el código línea por línea, lo que permite un desarrollo más rápido. Es como la diferencia entre escribir una novela completa y entregarla de una vez (compilación) o ir contando la historia capítulo a capítulo (interpretación).</p>${flowHTML("Proceso de Traducción", ["Intérprete", "Navegador"])}`,
+        type: 'normal'
+      },
+      {
+        title: "Paso 5: Enlace",
+        icon: icons.link,
+        body: `<p>En lenguajes compilados, el enlace (o "linking") es la fase donde se unen diferentes módulos de código y bibliotecas externas para crear un solo archivo ejecutable. En el contexto de JavaScript en la web, esto se asemeja a cómo se importan y conectan diferentes módulos de nuestro código o librerías externas para funcionar como un todo coherente.</p>${flowHTML("Integración de Módulos", ["Módulos", "Bibliotecas", "DOM"])}`,
+        type: 'normal'
+      },
+      {
+        title: "Paso 6: Prueba Interactiva",
+        icon: icons.flask,
+        body: `<p>La fase de prueba es crucial para garantizar que nuestra calculadora funcione como se espera. Realizamos pruebas unitarias para verificar cada función individualmente y pruebas de integración para asegurar que todos los componentes interactúen sin errores. ¡Prueba la calculadora a continuación para ver si funciona!</p><div class='calc p-6 rounded-xl bg-gray-100 mt-6 shadow-sm flex flex-col items-center max-w-lg mx-auto'><p class="text-lg font-semibold text-gray-800 mb-4">¡Prueba la calculadora!</p><div class="flex flex-col sm:flex-row items-center gap-2 w-full"><input id='expr' class="w-full p-2.5 rounded-lg border-2 border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400" placeholder='Ej: sumar(5,3) * 2'/> <button onclick='calcularExpresion()' class="w-full sm:w-auto mt-2 sm:mt-0 bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2.5 px-6 rounded-lg transition-colors duration-200">Calcular</button></div><div id='resultado' class="w-full text-center mt-4"></div></div>`,
+        type: 'normal'
+      },
+      {
+        title: "Paso 7: Correcciones y Mejoras",
+        icon: icons.wrench,
+        body: `<p>El desarrollo de software es un proceso iterativo. Una vez que identificamos errores durante las pruebas, entramos en la fase de depuración. Esta etapa también implica optimizar nuestro código para que sea más eficiente y mejorar la interfaz de usuario (UI) y la experiencia de usuario (UX) para que la calculadora sea intuitiva y agradable de usar.</p>${flowHTML("Mejora Continua", ["Depuración", "Optimización", "UI/UX"])}`,
+        type: 'normal'
+      },
+      {
+        title: "Paso 8: Empaquetado y Despliegue",
+        icon: icons.archive,
+        body: `<p>En el contexto de una aplicación web, el "empaquetado" implica preparar todos los archivos estáticos (HTML, CSS, JS) para su distribución en un servidor. Herramientas de "bundling" como Webpack o Vite ayudan a agrupar y minificar estos archivos para optimizar la velocidad de carga. El despliegue es el acto de poner la aplicación a disposición del público.</p>${flowHTML("Preparación para la Distribución", ["Minificación", "Bundling", "Despliegue"])}`,
+        type: 'normal'
+      },
+      {
+        title: "Paso 9: Documentación",
+        icon: icons.fileText,
+        body: `<p>Una buena documentación es tan importante como el código en sí. Permite que otros desarrolladores entiendan el código para futuras modificaciones y que los usuarios finales comprendan cómo utilizar la aplicación. Creamos manuales de usuario, guías de instalación y ejemplos de uso para que la calculadora sea accesible para todos.</p>${flowHTML("Recursos y Mantenimiento", ["Manuales", "Ejemplos", "Guías"])}`,
+        type: 'normal'
+      },
+      {
+        title: "Paso 10: Implementación Final",
+        icon: icons.check,
+        body: `<p>Esta es la fase final, donde la calculadora se pone a disposición de los usuarios. La aplicación está lista para ser utilizada en un entorno real. El mantenimiento continuo es esencial para corregir nuevos errores y añadir funcionalidades futuras, asegurando su longevidad y relevancia.</p>${flowHTML("Ciclo de Vida del Software", ["Publicación", "Uso", "Mantenimiento"])}`,
+        type: 'normal'
+      },
+      {
+        title: "Glosario",
+        icon: icons.glossary,
+        body: `<p>Aprende los conceptos clave que impulsaron este proyecto.</p><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">${[
+          { term: "Compilador", desc: "Un programa que traduce el código fuente completo a un lenguaje de bajo nivel antes de su ejecución." },
+          { term: "Intérprete", desc: "Un programa que ejecuta directamente el código fuente, instrucción por instrucción." },
+          { term: "Paradigma", desc: "Un estilo fundamental de programación, como la programación orientada a objetos o funcional." },
+          { term: "Token", desc: "La unidad léxica más pequeña de un lenguaje de programación, como una palabra clave o un identificador." },
+          { term: "Depuración", desc: "El proceso sistemático de encontrar y corregir errores en el código." },
+          { term: "Bundling", desc: "El proceso de agrupar y optimizar múltiples archivos de código en un solo archivo para el despliegue." }
+        ].map(item => `
+          <div class="group relative p-5 bg-gray-100 rounded-xl shadow-lg transition-transform duration-300 hover:scale-105">
+            <h3 class="text-xl font-bold text-indigo-600 group-hover:underline">${item.term}</h3>
+            <p class="mt-2 text-sm text-gray-700">${item.desc}</p>
+          </div>
+        `).join('')}</div>`,
+        type: 'normal'
+      },
+      {
+        title: "Conclusiones",
+        icon: icons.conclusions,
+        body: `<p>La construcción de esta calculadora, utilizando los principios de compiladores y lenguajes de programación, nos ha guiado a través de un ciclo de vida completo de un software. Desde la concepción de la idea hasta su despliegue final, cada paso es vital y demuestra la importancia de una metodología bien definida en la ingeniería de software. Es un proyecto ideal para comprender cómo se estructuran y ejecutan los lenguajes de programación en la práctica.</p>`,
+        type: 'normal'
+      },
+      {
+        title: "Bibliografía",
+        icon: icons.book,
+        body: `<p>Fuentes académicas y de referencia utilizadas para la creación de esta presentación.</p><ul class="list-disc list-inside space-y-2 mt-4 text-left max-w-2xl mx-auto"><li class="p-2 bg-gray-100 rounded-lg">Martínez López, F. (2015). <em>Teoría, diseño e implementación de compiladores de Lenguajes</em>. RA-MA Editorial.</li><li class="p-2 bg-gray-100 rounded-lg">Hopcroft, J., Motwani, R., & Ullman, J. (2006). <em>Introducción a la teoría de autómatas, lenguajes y computación</em>. Pearson.</li><li class="p-2 bg-gray-100 rounded-lg">Aho, A., Lam, M., Sethi, R., & Ullman, J. (2007). <em>Compilers: Principles, Techniques, and Tools</em>. Pearson.</li></ul>`,
+        type: 'normal'
+      },
+    ];
+
+    function renderSlide() {
+      deck.innerHTML = '';
+      const slideData = slides[currentIndex];
+      const el = document.createElement('section');
+      el.className = 'slide-active p-8 text-center flex flex-col items-center justify-center';
+      el.innerHTML = `
+        <div class="space-y-4">
+          <div class="mb-6 flex flex-col items-center justify-center space-y-3">
+            <div class="text-emerald-500">${slideData.icon}</div>
+            <div class="text-4xl font-bold text-indigo-600">${slideData.title}</div>
+          </div>
+          <div class="text-lg text-gray-700 leading-relaxed text-container text-justify mx-auto">${slideData.body}</div>
+        </div>
+      `;
+      deck.appendChild(el);
+      updateUI();
+    }
+
+    function updateUI() {
+      const progress = ((currentIndex + 1) / slides.length) * 100;
+      progressBar.style.width = `${progress}%`;
+    }
+
+    function navigate(index) {
+      if (index >= 0 && index < slides.length) {
+        currentIndex = index;
+        renderSlide();
+        closeMenu();
+      }
+    }
+
+    function nextSlide() {
+      navigate((currentIndex + 1) % slides.length);
+    }
+
+    function prevSlide() {
+      navigate((currentIndex - 1 + slides.length) % slides.length);
+    }
+
+    function toggleMenu() {
+      menuOverlay.classList.toggle('hidden');
+      menuPanel.classList.toggle('translate-x-full');
+    }
+
+    function closeMenu() {
+      menuOverlay.classList.add('hidden');
+      menuPanel.classList.add('translate-x-full');
+    }
+
+    function buildMenu() {
+      slides.forEach((slide, index) => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#';
+        a.textContent = slide.title;
+        a.className = 'block p-3 rounded-lg hover:bg-gray-100 transition-colors duration-200';
+        a.onclick = (e) => {
+          e.preventDefault();
+          navigate(index);
+        };
+        li.appendChild(a);
+        menuList.appendChild(li);
+      });
+    }
+
+    // Event listeners
+    prevBtn.addEventListener('click', prevSlide);
+    nextBtn.addEventListener('click', nextSlide);
+    menuBtn.addEventListener('click', toggleMenu);
+    menuOverlay.addEventListener('click', (e) => {
+      if (e.target === menuOverlay) {
+        closeMenu();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+    });
+
+    // Initial render
+    window.onload = () => {
+      buildMenu();
+      renderSlide();
+    };
+  </script>
+</body>
+</html>
